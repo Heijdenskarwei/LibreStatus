@@ -400,15 +400,25 @@ function updateProxyBar(ok) {
 }
 
 async function sha256hex(str) {
-  const buf = new TextEncoder().encode(str);
-  const hash = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  try {
+    const buf = new TextEncoder().encode(str);
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  } catch(e) {
+    // Fallback: stuur userId ongehasht (werkt ook bij oudere API versies)
+    return str;
+  }
 }
 
 async function libreReq(path, method, body, auth) {
   const host = REGION_HOSTS[S.region];
   const url = `${S.proxyUrl}/proxy/${host}${path}`;
-  const h = {'Content-Type':'application/json','version':'4.16.0','product':'llu.ios'};
+  const h = {
+    'Content-Type': 'application/json',
+    'version': '4.16.0',
+    'product': 'llu.ios',
+    'Accept': 'application/json',
+  };
   if (auth && S.token) {
     h['Authorization'] = 'Bearer '+S.token;
     if (S.accountId) h['Account-Id'] = S.accountId;
@@ -416,8 +426,14 @@ async function libreReq(path, method, body, auth) {
   const opts = {method:method||'GET', headers:h};
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(url, opts);
-  if (!r.ok) throw new Error('HTTP '+r.status);
-  return r.json();
+  const text = await r.text();
+  log('API antwoord ('+r.status+'): '+text.slice(0,120), 'ti-code');
+  if (!r.ok) throw new Error('HTTP '+r.status+': '+text.slice(0,80));
+  try {
+    return JSON.parse(text);
+  } catch(e) {
+    throw new Error('Ongeldig JSON antwoord: '+text.slice(0,80));
+  }
 }
 
 async function doLogin() {
@@ -429,19 +445,33 @@ async function doLogin() {
   btn.disabled=true;
   btn.innerHTML='<i class="ti ti-loader spin"></i> Inloggen...';
   setConn('Verbinden...','dot-orange');
-  log('Inloggen als '+email,'ti-login');
+  log('Inloggen als '+email+' via '+S.region, 'ti-login');
   try {
     let data = await libreReq('/llu/auth/login','POST',{email,password:pass},false);
-    if (data.data?.redirect && data.data?.region) {
-      S.region = data.data.region.toUpperCase();
+
+    // Redirect naar andere regio afhandelen
+    const redirect = data?.data?.redirect || data?.redirect;
+    const redirectRegion = data?.data?.region || data?.region;
+    if (redirect && redirectRegion) {
+      const newRegion = redirectRegion.toUpperCase();
+      log('Doorgestuurd naar regio: '+newRegion, 'ti-map-pin');
+      S.region = newRegion;
       data = await libreReq('/llu/auth/login','POST',{email,password:pass},false);
     }
-    if (!data.data?.authTicket?.token) throw new Error('Geen token ontvangen');
-    S.token = data.data.authTicket.token;
+
+    const token = data?.data?.authTicket?.token;
+    if (!token) {
+      const status = data?.status;
+      if (status === 2) throw new Error('E-mailverificatie vereist — bevestig eerst je account via de Abbott-mail');
+      if (status === 4) throw new Error('Verkeerd wachtwoord');
+      throw new Error('Geen token ontvangen (status: '+status+')');
+    }
+
+    S.token = token;
     S.userId = data.data.user.id;
     S.accountId = await sha256hex(S.userId);
     S.loggedIn = true;
-    log('Ingelogd als '+data.data.user.firstName,'ti-check');
+    log('Ingelogd als '+data.data.user.firstName, 'ti-check');
     setConn('Verbonden','dot-green');
     await fetchConnections();
     document.getElementById('login-section').style.display='none';

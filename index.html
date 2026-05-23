@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Libre Monitor">
+<title>Libre Monitor</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f4f0;
+    --bg3: #eceae3;
+    --text: #1a1a18;
+    --text2: #6b6a64;
+    --text3: #9c9a92;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.08);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --green: #3B6D11; --green-bg: #EAF3DE;
+    --red: #A32D2D; --red-bg: #FCEBEB;
+    --blue: #185FA5; --blue-bg: #E6F1FB;
+    --orange: #854F0B; --orange-bg: #FAEEDA;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'SF Mono', 'Fira Code', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #252522; --bg3: #2e2e2b;
+      --text: #e8e6de; --text2: #9c9a92; --text3: #6b6a64;
+      --border: rgba(255,255,255,0.10); --border2: rgba(255,255,255,0.06);
+      --green: #97C459; --green-bg: #17340a;
+      --red: #F09595; --red-bg: #3a1010;
+      --blue: #85B7EB; --blue-bg: #042c53;
+      --orange: #EF9F27; --orange-bg: #412402;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: var(--font); background: var(--bg3); color: var(--text); min-height: 100vh; }
+  .app { max-width: 480px; margin: 0 auto; padding: 16px; }
+  .header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 12px 16px; background: var(--bg); border-radius: var(--radius); border: 0.5px solid var(--border); }
+  .logo { width: 36px; height: 36px; background: var(--blue-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo i { font-size: 20px; color: var(--blue); }
+  .hdr-title { font-size: 15px; font-weight: 600; }
+  .hdr-sub { font-size: 12px; color: var(--text2); }
+  .conn { margin-left: auto; display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
+  .dot-green { background: var(--green); }
+  .dot-red { background: var(--red); }
+  .dot-orange { background: var(--orange); }
+
+  .tabs { display: flex; gap: 2px; background: var(--bg2); border-radius: 10px; padding: 3px; margin-bottom: 14px; }
+  .tab { flex: 1; padding: 7px 4px; text-align: center; font-size: 12px; border-radius: 8px; cursor: pointer; border: none; background: transparent; color: var(--text2); font-family: var(--font); }
+  .tab.active { background: var(--bg); color: var(--text); font-weight: 500; border: 0.5px solid var(--border); }
+
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .card-label { font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; align-items: center; gap: 5px; }
+
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 5px; }
+  input[type=email], input[type=password], input[type=url], select {
+    width: 100%; padding: 10px 12px; border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--bg2); color: var(--text);
+    font-size: 15px; font-family: var(--font); -webkit-appearance: none;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; cursor: pointer; border: none; font-family: var(--font); transition: opacity 0.15s; }
+  .btn:active { opacity: 0.75; }
+  .btn-primary { background: var(--blue-bg); color: var(--blue); }
+  .btn-success { background: var(--green-bg); color: var(--green); }
+  .btn-danger { background: var(--red-bg); color: var(--red); }
+  .btn-neutral { background: var(--bg2); color: var(--text); border: 0.5px solid var(--border); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+  .glucose-val { font-size: 64px; font-weight: 300; font-family: var(--mono); line-height: 1; }
+  .glucose-unit { font-size: 18px; color: var(--text2); margin-left: 4px; }
+  .glucose-trend { font-size: 32px; margin-left: 8px; }
+  .val-ok { color: var(--green); }
+  .val-warn { color: var(--orange); }
+  .val-danger { color: var(--red); }
+  .meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+  .meta span { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; }
+
+  .alert { border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start; font-size: 13px; }
+  .alert i { font-size: 18px; margin-top: 1px; flex-shrink: 0; }
+  .alert strong { display: block; font-weight: 600; margin-bottom: 2px; }
+  .alert-danger { background: var(--red-bg); color: var(--red); }
+  .alert-warn { background: var(--orange-bg); color: var(--orange); }
+  .alert-success { background: var(--green-bg); color: var(--green); }
+  .alert-info { background: var(--blue-bg); color: var(--blue); }
+
+  .badge { font-size: 11px; padding: 2px 9px; border-radius: 999px; font-weight: 500; }
+  .badge-ok { background: var(--green-bg); color: var(--green); }
+  .badge-off { background: var(--red-bg); color: var(--red); }
+
+  .alarm-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 0.5px solid var(--border2); }
+  .alarm-row:last-child { border-bottom: none; }
+  .alarm-name { flex: 1; font-size: 14px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .stat { background: var(--bg2); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .stat-label { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+  .stat-val { font-size: 22px; font-weight: 500; font-family: var(--mono); }
+  .stat-unit { font-size: 11px; color: var(--text2); }
+
+  .log-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); padding: 7px 0; border-bottom: 0.5px solid var(--border2); }
+  .log-item i { font-size: 15px; flex-shrink: 0; }
+  .log-time { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--text3); }
+
+  .proxy-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg2); border-radius: var(--radius-sm); margin-bottom: 12px; font-size: 13px; color: var(--text2); }
+
+  .stap { display: flex; gap: 10px; margin-bottom: 12px; }
+  .stap-nr { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; margin-top: 2px; }
+  .nr-blauw { background: var(--blue-bg); color: var(--blue); }
+  .nr-groen { background: var(--green-bg); color: var(--green); }
+  .stap-titel { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .stap-tekst { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .stap-tekst a { color: var(--blue); text-decoration: none; }
+  .code { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: var(--mono); font-size: 12px; }
+  .tip { background: var(--orange-bg); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 12px; color: var(--orange); margin-top: 6px; display: flex; gap: 6px; }
+  .fase-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin-bottom: 12px; }
+  .fase-github { background: var(--bg2); color: var(--text2); border: 0.5px solid var(--border); }
+  .fase-render { background: var(--blue-bg); color: var(--blue); }
+  .fase-uptime { background: var(--green-bg); color: var(--green); }
+
+  .disclaimer { font-size: 11px; color: var(--text3); margin-top: 10px; line-height: 1.6; padding: 8px 10px; background: var(--bg2); border-radius: var(--radius-sm); }
+
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* iPhone home screen webclip hint */
+  .install-hint { display: none; }
+  @media (max-width: 480px) {
+    .install-hint { display: flex; align-items: center; gap: 8px; background: var(--blue-bg); color: var(--blue); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; margin-bottom: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo"><i class="ti ti-droplet"></i></div>
+    <div>
+      <div class="hdr-title">Libre Monitor</div>
+      <div class="hdr-sub">FreeStyle Libre via LibreLinkUp</div>
+    </div>
+    <div class="conn" id="conn-status">
+      <span class="dot" id="conn-dot"></span>
+      <span id="conn-label">Niet verbonden</span>
+    </div>
+  </div>
+
+  <div class="install-hint">
+    <i class="ti ti-share"></i> Tip: voeg toe aan beginscherm via de deelknop voor een app-ervaring.
+  </div>
+
+  <div id="alerts-area"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('setup')" id="tab-setup">Setup</button>
+    <button class="tab" onclick="showTab('dashboard')" id="tab-dashboard">Dashboard</button>
+    <button class="tab" onclick="showTab('alarmen')" id="tab-alarmen">Alarmen</button>
+    <button class="tab" onclick="showTab('log')" id="tab-log">Log</button>
+  </div>
+
+  <!-- SETUP -->
+  <div id="view-setup">
+    <div class="card">
+      <div class="card-label"><i class="ti ti-check"></i> Je bent er bijna!</div>
+      <div class="stap-tekst" style="margin-bottom:14px">De proxy draait al op Render. Vul hieronder je URL in om de monitor te activeren.</div>
+
+      <div class="field">
+        <label>Jouw Render URL</label>
+        <input type="url" id="inp-proxy" placeholder="https://librestatus.onrender.com" />
+      </div>
+      <div id="proxy-result"></div>
+      <button class="btn btn-primary" onclick="testProxy()" id="btn-test">
+        <i class="ti ti-wifi"></i> Verbinding testen
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="fase-pill fase-uptime"><i class="ti ti-radar"></i> UptimeRobot (voorkomt slaapstand)</div>
+      <div class="stap">
+        <div class="stap-nr nr-groen">1</div>
+        <div>
+          <div class="stap-titel">Account aanmaken</div>
+          <div class="stap-tekst">Ga naar <a href="https://uptimerobot.com" target="_blank">uptimerobot.com</a> → <em>Register for FREE</em>.</div>
+        </div>
+      </div>
+      <div class="stap">
+        <div class="stap-nr nr-groen">2</div>
+        <div>
+          <div class="stap-titel">Nieuwe monitor aanmaken</div>
+          <div class="stap-tekst">Klik <em>Add New Monitor</em> en vul in:<br>
+            Type: <span class="code">HTTP(s)</span><br>
+            URL: <span class="code">https://librestatus.onrender.com/health</span><br>
+            Interval: <span class="code">5 minutes</span>
+          </div>
+          <div class="tip"><i class="ti ti-info-circle"></i> Vervang de URL met jouw eigen Render-adres als dat anders is.</div>
+        </div>
+      </div>
+      <div class="stap">
+        <div class="stap-nr nr-groen">3</div>
+        <div>
+          <div class="stap-titel">Klaar!</div>
+          <div class="stap-tekst">Groen lampje in UptimeRobot = proxy altijd wakker, ook op je iPhone.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="view-dashboard" style="display:none">
+    <div id="login-section">
+      <div class="card">
+        <div class="card-label"><i class="ti ti-login"></i> Inloggen met LibreLinkUp</div>
+        <div class="proxy-bar">
+          <span class="dot" id="proxy-dot"></span>
+          <span id="proxy-bar-text">Stel eerst de proxy URL in via Setup</span>
+        </div>
+        <div class="field">
+          <label>E-mailadres</label>
+          <input type="email" id="inp-email" placeholder="jouw@email.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label>Wachtwoord</label>
+          <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <div class="field">
+          <label>Regio</label>
+          <select id="inp-region">
+            <option value="EU">Europa (standaard)</option>
+            <option value="EU2">Europa 2</option>
+            <option value="DE">Duitsland</option>
+            <option value="US">Verenigde Staten</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="doLogin()" id="btn-login" style="width:100%;justify-content:center">
+          <i class="ti ti-plug"></i> Verbinding maken
+        </button>
+        <div class="disclaimer">Je inloggegevens gaan via jouw eigen Render-proxy naar Abbott's servers. Ze worden nergens opgeslagen.</div>
+      </div>
+    </div>
+
+    <div id="glucose-section" style="display:none">
+      <div class="card">
+        <div class="card-label"><i class="ti ti-activity-heartbeat"></i> Actuele glucosewaarde</div>
+        <div style="display:flex;align-items:baseline">
+          <span class="glucose-val" id="gluc-val">—</span>
+          <span class="glucose-unit">mg/dL</span>
+          <span class="glucose-trend" id="gluc-trend"></span>
+        </div>
+        <div class="meta">
+          <span><i class="ti ti-clock"></i> <span id="gluc-time">—</span></span>
+          <span><i class="ti ti-user"></i> <span id="gluc-patient">—</span></span>
+          <span><i class="ti ti-refresh"></i> <span id="gluc-next">—</span></span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-neutral" onclick="fetchGlucose()" id="btn-refresh"><i class="ti ti-refresh"></i> Vernieuwen</button>
+          <button class="btn btn-danger" onclick="doLogout()"><i class="ti ti-logout"></i> Afmelden</button>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-label">Verversing</div>
+          <div class="stat-val" id="s-interval">5</div>
+          <div class="stat-unit">minuten</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Laag alarm na</div>
+          <div class="stat-val" id="s-laag">60</div>
+          <div class="stat-unit">minuten</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Hoog alarm na</div>
+          <div class="stat-val" id="s-hoog">60</div>
+          <div class="stat-unit">minuten</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALARMEN -->
+  <div id="view-alarmen" style="display:none">
+    <div class="card">
+      <div class="card-label"><i class="ti ti-bell"></i> Alarmstatus</div>
+      <div id="alarm-rows"><div style="font-size:13px;color:var(--text2);padding:4px 0">Log eerst in om alarmstatus te zien.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-label"><i class="ti ti-clock"></i> Tijdslimiet per alarm</div>
+      <div id="alarm-limits"></div>
+    </div>
+    <div class="card">
+      <div class="card-label"><i class="ti ti-settings"></i> Verversingsinterval</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="range" min="1" max="15" step="1" value="5" id="sl-interval" oninput="updInterval(this.value)" style="flex:1;accent-color:var(--blue)" />
+        <span style="font-size:15px;font-weight:500;min-width:52px;font-family:var(--mono)" id="lbl-interval">5 min</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-top:6px">Libre sensor werkt bij per 5 minuten.</div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div id="view-log" style="display:none">
+    <div class="card">
+      <div class="card-label"><i class="ti ti-list"></i> Activiteitslog</div>
+      <div id="log-items"><div style="font-size:13px;color:var(--text2)">Nog geen activiteit.</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const REGION_HOSTS = {
+  EU:'api-eu.libreview.io', EU2:'api-eu2.libreview.io',
+  DE:'api-de.libreview.io', US:'api.libreview.io'
+};
+const TRENDS = {1:'↑↑',2:'↑',3:'↗',4:'→',5:'↘',6:'↓',7:'↓↓'};
+
+let S = {
+  proxyUrl: window.location.origin, // gebruik zelfde server als waar app draait
+  loggedIn:false, token:null, userId:null, accountId:null,
+  patientId:null, patientName:'', region:'EU',
+  intervalMin:5, low:70, high:180,
+  lastGlucose:null, fetchTimer:null, nextFetch:null,
+  alarms:{
+    laag:   {name:'Laag glucose alarm', limitMin:60, offSince:null},
+    hoog:   {name:'Hoog glucose alarm', limitMin:60, offSince:null},
+    urgent: {name:'Urgent laag alarm',  limitMin:30, offSince:null},
+  },
+  logs:[],
+};
+
+// Vul proxy URL automatisch in met huidig domein
+document.getElementById('inp-proxy').value = window.location.origin;
+updateProxyBar(true);
+
+function log(msg, icon) {
+  const ts = new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  S.logs.unshift({msg, icon:icon||'ti-info-circle', ts});
+  if (S.logs.length > 80) S.logs.pop();
+}
+
+function showTab(t) {
+  ['setup','dashboard','alarmen','log'].forEach(v => {
+    document.getElementById('view-'+v).style.display = v===t?'':'none';
+    document.getElementById('tab-'+v).className = 'tab'+(v===t?' active':'');
+  });
+  if (t==='log') renderLog();
+  if (t==='alarmen') renderAlarms();
+}
+
+function setConn(label, dotClass) {
+  document.getElementById('conn-label').textContent = label;
+  const dot = document.getElementById('conn-dot');
+  dot.className = 'dot ' + dotClass;
+}
+
+function flash(msg, type) {
+  const el = document.getElementById('alerts-area');
+  const d = document.createElement('div');
+  d.className = 'alert alert-'+type;
+  d.innerHTML = `<i class="ti ti-info-circle"></i><div><strong></strong>${msg}</div>`;
+  el.insertBefore(d, el.firstChild);
+  setTimeout(()=>d.remove(), 6000);
+}
+
+async function testProxy() {
+  const url = document.getElementById('inp-proxy').value.trim().replace(/\/$/,'');
+  if (!url) { flash('Vul je Render URL in.','warn'); return; }
+  S.proxyUrl = url;
+  const btn = document.getElementById('btn-test');
+  const res = document.getElementById('proxy-result');
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader spin"></i> Testen...';
+  try {
+    const r = await fetch(url+'/health');
+    const j = await r.json();
+    if (j.status==='ok') {
+      res.innerHTML='<div class="alert alert-success" style="margin-top:8px"><i class="ti ti-check"></i><div><strong>Verbinding geslaagd!</strong> Ga naar Dashboard om in te loggen.</div></div>';
+      updateProxyBar(true);
+      log('Proxy verbonden: '+url, 'ti-plug');
+    } else throw new Error();
+  } catch(e) {
+    res.innerHTML='<div class="alert alert-danger" style="margin-top:8px"><i class="ti ti-x"></i><div><strong>Niet bereikbaar.</strong> Controleer de URL of wacht tot Render klaar is.</div></div>';
+  }
+  btn.disabled=false;
+  btn.innerHTML='<i class="ti ti-wifi"></i> Verbinding testen';
+}
+
+function updateProxyBar(ok) {
+  document.getElementById('proxy-dot').className = 'dot ' + (ok ? 'dot-green' : 'dot-red');
+  document.getElementById('proxy-bar-text').textContent = ok ? 'Proxy verbonden: '+S.proxyUrl : 'Geen proxy — ga naar Setup';
+}
+
+async function sha256hex(str) {
+  const buf = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function libreReq(path, method, body, auth) {
+  const host = REGION_HOSTS[S.region];
+  const url = `${S.proxyUrl}/proxy/${host}${path}`;
+  const h = {'Content-Type':'application/json','version':'4.16.0','product':'llu.ios'};
+  if (auth && S.token) {
+    h['Authorization'] = 'Bearer '+S.token;
+    if (S.accountId) h['Account-Id'] = S.accountId;
+  }
+  const opts = {method:method||'GET', headers:h};
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+async function doLogin() {
+  const email = document.getElementById('inp-email').value.trim();
+  const pass = document.getElementById('inp-pass').value;
+  S.region = document.getElementById('inp-region').value;
+  if (!email||!pass) { flash('Vul e-mailadres en wachtwoord in.','warn'); return; }
+  const btn = document.getElementById('btn-login');
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader spin"></i> Inloggen...';
+  setConn('Verbinden...','dot-orange');
+  log('Inloggen als '+email,'ti-login');
+  try {
+    let data = await libreReq('/llu/auth/login','POST',{email,password:pass},false);
+    if (data.data?.redirect && data.data?.region) {
+      S.region = data.data.region.toUpperCase();
+      data = await libreReq('/llu/auth/login','POST',{email,password:pass},false);
+    }
+    if (!data.data?.authTicket?.token) throw new Error('Geen token ontvangen');
+    S.token = data.data.authTicket.token;
+    S.userId = data.data.user.id;
+    S.accountId = await sha256hex(S.userId);
+    S.loggedIn = true;
+    log('Ingelogd als '+data.data.user.firstName,'ti-check');
+    setConn('Verbonden','dot-green');
+    await fetchConnections();
+    document.getElementById('login-section').style.display='none';
+    document.getElementById('glucose-section').style.display='';
+    fetchGlucose();
+    startAutoRefresh();
+  } catch(e) {
+    flash('Inloggen mislukt: '+e.message,'danger');
+    log('Inlogfout: '+e.message,'ti-alert-circle');
+    setConn('Fout','dot-red');
+  }
+  btn.disabled=false;
+  btn.innerHTML='<i class="ti ti-plug"></i> Verbinding maken';
+}
+
+async function fetchConnections() {
+  try {
+    const data = await libreReq('/llu/connections','GET',null,true);
+    if (data.data?.length>0) {
+      S.patientId = data.data[0].patientId;
+      S.patientName = data.data[0].firstName+' '+data.data[0].lastName;
+      log('Patiënt gevonden: '+S.patientName,'ti-user');
+    } else {
+      flash('Geen patiënten gevonden. Zorg dat LibreLink is ingesteld op delen via LibreLinkUp.','warn');
+    }
+  } catch(e) { log('Verbindingsfout: '+e.message,'ti-alert-circle'); }
+}
+
+async function fetchGlucose() {
+  if (!S.loggedIn||!S.patientId) return;
+  const btn = document.getElementById('btn-refresh');
+  if (btn) { btn.disabled=true; btn.innerHTML='<i class="ti ti-loader spin"></i> Ophalen...'; }
+  try {
+    const data = await libreReq(`/llu/connections/${S.patientId}/graph`,'GET',null,true);
+    const gv = data.data?.connection?.glucoseMeasurement;
+    if (gv) {
+      S.lastGlucose = {value:gv.ValueInMgPerDl, trend:gv.TrendArrow, time:gv.Timestamp, isHigh:gv.isHigh, isLow:gv.isLow};
+      log(`Glucose: ${gv.ValueInMgPerDl} mg/dL (${TRENDS[gv.TrendArrow]||'→'})`, 'ti-droplet');
+      updateDisplay();
+      checkAlarms();
+    }
+  } catch(e) {
+    log('Ophaalfout: '+e.message,'ti-alert-circle');
+  }
+  if (btn) { btn.disabled=false; btn.innerHTML='<i class="ti ti-refresh"></i> Vernieuwen'; }
+}
+
+function formatDur(ms) {
+  const m=Math.floor(ms/60000), h=Math.floor(m/60);
+  return h>0 ? h+'u '+(m%60)+'m' : m+'m';
+}
+
+function checkAlarms() {
+  const g=S.lastGlucose; if (!g) return;
+  const now=Date.now();
+  const isLow=g.isLow||g.value<S.low, isHigh=g.isHigh||g.value>S.high;
+  if (isLow)  { if (!S.alarms.laag.offSince)   { S.alarms.laag.offSince=now;   log('Laag alarm gedetecteerd','ti-arrow-down'); } }
+  else        { if (S.alarms.laag.offSince)     { S.alarms.laag.offSince=null;  log('Laag alarm opgelost','ti-check'); } }
+  if (g.value<55) { if (!S.alarms.urgent.offSince) { S.alarms.urgent.offSince=now; log('Urgent laag alarm!','ti-alert-triangle'); } }
+  else            { if (S.alarms.urgent.offSince)   { S.alarms.urgent.offSince=null; } }
+  if (isHigh) { if (!S.alarms.hoog.offSince)   { S.alarms.hoog.offSince=now;   log('Hoog alarm gedetecteerd','ti-arrow-up'); } }
+  else        { if (S.alarms.hoog.offSince)     { S.alarms.hoog.offSince=null;  log('Hoog alarm opgelost','ti-check'); } }
+  renderAlertBanners();
+  renderAlarms();
+}
+
+function renderAlertBanners() {
+  const now=Date.now(); let html='';
+  Object.entries(S.alarms).forEach(([id,al])=>{
+    if (!al.offSince) return;
+    const elapsed=now-al.offSince, lim=al.limitMin*60000;
+    if (elapsed>=lim) {
+      html+=`<div class="alert alert-danger"><i class="ti ti-alert-circle"></i><div><strong>${al.name} — al ${formatDur(elapsed)} buiten bereik!</strong><div style="margin-top:8px"><button class="btn btn-success" onclick="ackAlarm('${id}')"><i class="ti ti-check"></i> Gezien</button></div></div></div>`;
+    } else if (elapsed>=lim*0.7) {
+      html+=`<div class="alert alert-warn"><i class="ti ti-bell-ringing"></i><div><strong>${al.name} — bijna ${al.limitMin} min buiten bereik.</strong></div></div>`;
+    }
+  });
+  document.getElementById('alerts-area').innerHTML=html;
+}
+
+function ackAlarm(id) {
+  S.alarms[id].offSince=null;
+  log('Alarm bevestigd: '+S.alarms[id].name,'ti-check');
+  renderAlertBanners(); renderAlarms();
+}
+
+function updateDisplay() {
+  const g=S.lastGlucose; if (!g) return;
+  const el=document.getElementById('gluc-val');
+  el.textContent=g.value;
+  el.className='glucose-val '+(g.isLow||g.value<S.low?'val-danger':g.isHigh||g.value>S.high?'val-warn':'val-ok');
+  document.getElementById('gluc-trend').textContent=TRENDS[g.trend]||'→';
+  const d=new Date(g.time);
+  document.getElementById('gluc-time').textContent=isNaN(d)?g.time:d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('gluc-patient').textContent=S.patientName||'—';
+  document.getElementById('gluc-next').textContent='volgende over '+S.intervalMin+'m';
+  document.getElementById('s-interval').textContent=S.intervalMin;
+  document.getElementById('s-laag').textContent=S.alarms.laag.limitMin;
+  document.getElementById('s-hoog').textContent=S.alarms.hoog.limitMin;
+}
+
+function renderAlarms() {
+  const now=Date.now(); let rows='';
+  Object.entries(S.alarms).forEach(([id,al])=>{
+    const active=!!al.offSince, elapsed=active?now-al.offSince:0;
+    const badge=active?`<span class="badge badge-off">Buiten bereik ${formatDur(elapsed)}</span>`:`<span class="badge badge-ok">Normaal</span>`;
+    rows+=`<div class="alarm-row"><i class="ti ti-bell" style="font-size:16px;color:var(--text2)"></i><span class="alarm-name">${al.name}</span>${badge}</div>`;
+  });
+  document.getElementById('alarm-rows').innerHTML = rows || '<div style="font-size:13px;color:var(--text2)">Log eerst in.</div>';
+
+  let lims='';
+  Object.entries(S.alarms).forEach(([id,al])=>{
+    lims+=`<div style="margin-bottom:14px"><div style="font-size:13px;margin-bottom:5px">${al.name}</div><div style="display:flex;align-items:center;gap:10px"><input type="range" min="5" max="180" step="5" value="${al.limitMin}" oninput="S.alarms['${id}'].limitMin=parseInt(this.value);document.getElementById('lv-${id}').textContent=this.value+' min'" style="flex:1;accent-color:var(--blue)"><span style="font-size:13px;font-weight:500;min-width:52px;font-family:var(--mono)" id="lv-${id}">${al.limitMin} min</span></div></div>`;
+  });
+  document.getElementById('alarm-limits').innerHTML=lims;
+}
+
+function updInterval(v) {
+  document.getElementById('lbl-interval').textContent=v+' min';
+  S.intervalMin=parseInt(v);
+  startAutoRefresh();
+}
+
+function startAutoRefresh() {
+  clearInterval(S.fetchTimer);
+  S.fetchTimer=setInterval(fetchGlucose, S.intervalMin*60000);
+}
+
+function doLogout() {
+  S.loggedIn=false; S.token=null; S.patientId=null; S.lastGlucose=null;
+  clearInterval(S.fetchTimer);
+  document.getElementById('login-section').style.display='';
+  document.getElementById('glucose-section').style.display='none';
+  setConn('Niet verbonden','');
+  log('Afgemeld','ti-logout');
+}
+
+function renderLog() {
+  const el=document.getElementById('log-items');
+  if (!S.logs.length) { el.innerHTML='<div style="font-size:13px;color:var(--text2)">Nog geen activiteit.</div>'; return; }
+  el.innerHTML=S.logs.map(l=>`<div class="log-item"><i class="ti ${l.icon}"></i>${l.msg}<span class="log-time">${l.ts}</span></div>`).join('');
+}
+
+// Vraag toestemming voor notificaties
+if ('Notification' in window && Notification.permission === 'default') {
+  setTimeout(()=>Notification.requestPermission(), 3000);
+}
+
+showTab('setup');
+</script>
+</body>
+</html>

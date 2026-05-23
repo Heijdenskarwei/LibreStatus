@@ -1,7 +1,7 @@
 {
-  "name": "librelinkup-proxy",
+  "name": "librestatus",
   "version": "1.0.0",
-  "description": "CORS proxy voor FreeStyle Libre monitor",
+  "description": "FreeStyle Libre glucose monitor met LibreLinkUp koppeling",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

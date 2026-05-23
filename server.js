@@ -1,9 +1,7 @@
-/**
- * LibreLinkUp CORS Proxy — Railway deployment
- */
-
 const http = require('http');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = process.env.PORT || 3456;
 
@@ -24,13 +22,25 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  if (req.url === '/' || req.url === '/health') {
+  // Serve de monitor app
+  if (req.url === '/' || req.url === '/index.html') {
+    const filePath = path.join(__dirname, 'index.html');
+    fs.readFile(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('index.html niet gevonden'); return; }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(data);
+    });
+    return;
+  }
+
+  // Health check
+  if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', service: 'LibreLinkUp proxy' }));
     return;
   }
 
-  // Verwacht: /proxy/api-eu.libreview.io/llu/auth/login
+  // Proxy: /proxy/api-eu.libreview.io/llu/auth/login
   const parts = req.url.slice(1).split('/');
   if (parts[0] !== 'proxy' || parts.length < 2) {
     res.writeHead(400); res.end('Gebruik /proxy/<host>/<pad>'); return;
@@ -72,5 +82,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`LibreLinkUp proxy actief op poort ${PORT}`);
+  console.log(`LibreStatus actief op poort ${PORT}`);
 });

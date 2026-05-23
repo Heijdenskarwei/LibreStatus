@@ -2,6 +2,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const PORT = process.env.PORT || 3456;
 
@@ -53,32 +54,67 @@ const server = http.createServer((req, res) => {
     res.writeHead(403); res.end('Host niet toegestaan'); return;
   }
 
+  // Bouw headers op — verwijder encoding zodat we plain JSON krijgen
   const forwardHeaders = {};
   for (const [k, v] of Object.entries(req.headers)) {
-    if (!['host', 'origin', 'referer', 'connection'].includes(k.toLowerCase())) {
+    if (!['host', 'origin', 'referer', 'connection', 'accept-encoding'].includes(k.toLowerCase())) {
       forwardHeaders[k] = v;
     }
   }
   forwardHeaders['host'] = targetHost;
+  forwardHeaders['accept-encoding'] = 'identity'; // geen gzip/deflate
 
   console.log(`${new Date().toISOString()} ${req.method} → https://${targetHost}${targetPath}`);
 
-  const proxyReq = https.request(
-    { hostname: targetHost, port: 443, path: targetPath, method: req.method, headers: forwardHeaders },
-    (proxyRes) => {
-      res.writeHead(proxyRes.statusCode, {
-        'Content-Type': proxyRes.headers['content-type'] || 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      });
-      proxyRes.pipe(res, { end: true });
-    }
-  );
+  // Lees request body eerst volledig in
+  let body = [];
+  req.on('data', chunk => body.push(chunk));
+  req.on('end', () => {
+    const bodyBuffer = Buffer.concat(body);
 
-  proxyReq.on('error', (e) => {
-    res.writeHead(502); res.end(JSON.stringify({ error: e.message }));
+    const proxyReq = https.request(
+      { hostname: targetHost, port: 443, path: targetPath, method: req.method, headers: forwardHeaders },
+      (proxyRes) => {
+        const encoding = proxyRes.headers['content-encoding'];
+        let stream = proxyRes;
+
+        // Decomprimeer indien nodig
+        if (encoding === 'gzip') {
+          stream = proxyRes.pipe(zlib.createGunzip());
+        } else if (encoding === 'deflate') {
+          stream = proxyRes.pipe(zlib.createInflate());
+        } else if (encoding === 'br') {
+          stream = proxyRes.pipe(zlib.createBrotliDecompress());
+        }
+
+        // Verzamel volledige response
+        let chunks = [];
+        stream.on('data', chunk => chunks.push(chunk));
+        stream.on('end', () => {
+          const responseBody = Buffer.concat(chunks);
+          res.writeHead(proxyRes.statusCode, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Access-Control-Allow-Origin': '*',
+            'Content-Length': responseBody.length,
+          });
+          res.end(responseBody);
+          console.log(`  ← ${proxyRes.statusCode} (${responseBody.length} bytes)`);
+        });
+        stream.on('error', (e) => {
+          console.error('Decompress fout:', e.message);
+          res.writeHead(502); res.end(JSON.stringify({ error: 'Decompress fout: ' + e.message }));
+        });
+      }
+    );
+
+    proxyReq.on('error', (e) => {
+      console.error('Proxy fout:', e.message);
+      res.writeHead(502); res.end(JSON.stringify({ error: e.message }));
+    });
+
+    if (bodyBuffer.length > 0) proxyReq.write(bodyBuffer);
+    proxyReq.end();
   });
-
-  req.pipe(proxyReq, { end: true });
 });
 
 server.listen(PORT, () => {
